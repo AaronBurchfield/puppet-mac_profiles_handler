@@ -1,5 +1,4 @@
 require 'puppet/util/plist'
-require 'tmpdir'
 
 Puppet::Type.type(:profile_manager).provide :macos do
   desc 'Provides management of mobileconfig profiles on macOS.'
@@ -61,12 +60,9 @@ Puppet::Type.type(:profile_manager).provide :macos do
   end
 
   def getinstalledstate
-    # profiles will only write to a nonexistant file, so we make a temp dir for it to write to.
-    path = Dir.mktmpdir + '/profiles.plist'
-
-    Puppet::Util::Execution.execute(['/usr/bin/profiles', '-C', '-o', path])
-
-    plist = Puppet::Util::Plist.read_plist_file(path)
+    # Dump profile list to stdout as xml and parse plist data
+    plist_xml = Facter::Util::Resolution.exec(['/usr/bin/profiles', '-C', '-o', 'stdout-xml'].join(' '))
+    plist = Puppet::Util::Plist.parse_plist(plist_xml)
 
     if plist.key?('_computerlevel')
       for item in plist['_computerlevel']
